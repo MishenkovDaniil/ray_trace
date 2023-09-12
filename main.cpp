@@ -4,118 +4,65 @@
 #include <SFML/Graphics.hpp>
 
 #include "graphic_structures.h"
+#include "bdrf_calc.h"
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 800;
-const double dx = (double)100 / (double)WINDOW_WIDTH;
-const double dz = (double)100 / (double)WINDOW_HEIGHT;
+
+const double X_START = -50;
+const double Z_START = 50;
+
+const double X_END = 50;
+const double Z_END = -50;
+
+const double DX = (X_END - X_START) / (double)WINDOW_WIDTH;
+const double DZ = (Z_END - Z_START) / (double)WINDOW_HEIGHT;
+
 const double RADIUS = 100;
+const int COLOR_COMP_NUM = 4;
+const int ALPHA_COMP_IDX = 3;
+const int COLOR_MAX_VAL = 0xFF;
 
-
-
-double calc_diffise (const Point &light, const Point &screen_p, Sphere &sphere, const Point &cam_strt);
-Point find_intersection (Sphere &sphere, const Vector &direction, const Point &cam_strt);
-
-Point find_intersection (Sphere &sphere, const Vector &direction, const Point &cam_strt)
-{
-    Point P (0, 0, 0); // joint point
-    
-    Vector cam_to_sphere_center (cam_strt, sphere.get_start ()); // AO
-    Vector cam_to_sphere_center_norm = !cam_to_sphere_center;
-
-    Vector AK = (!direction) && ((sqrt(cam_to_sphere_center || cam_to_sphere_center)) * ((!direction) || cam_to_sphere_center_norm));
-    Vector OK = -cam_to_sphere_center + AK;
-    
-    if ((OK||OK) > (sphere.get_radius () * sphere.get_radius ())) 
-    {
-        P = Point (NAN, NAN, NAN);
-        return P;
-    }
-
-    Vector directsqrt = (!direction) && (sqrt ((sphere.get_radius () * sphere.get_radius ()) - (OK || OK)));
-    Vector AP = AK - directsqrt;
-    Vector P_vec = AP + Vector (Point (0, 0, 0), cam_strt);
-    
-    P = P_vec.vec_to_point ();
-
-    return P;
-}
-
-double calc_diffise (const Point &light, const Point &screen_p, Sphere &sphere, const Point &cam_strt)
-{
-    Vector dir (cam_strt, sphere.get_start ()); // AO
-    Vector obs = ! Vector (cam_strt, screen_p); //AB
-    
-    Point P = find_intersection (sphere, obs, cam_strt);
-    if (std::isnan (P.x_) || std::isnan (P.y_) || std::isnan (P.z_))
-    {
-        return -1;
-    }
-
-    Vector AP  (cam_strt, P);
-    Vector light_vec (P, light);
-    Vector normal (sphere.get_start (), P);
-    
-    double diffuse = (!light_vec) || (!normal);
-    diffuse = diffuse > 0 ? diffuse : 0;
-
-    Vector reflected =  -(light_vec - (normal && (2 * ((!light_vec) || (!normal)))));
-    
-    double spectacular = (!-AP) || (!reflected);
-    spectacular = spectacular > 0 ? spectacular : 0;
-    spectacular = pow (spectacular, 16);
-
-    return (diffuse + spectacular)*0.5;
-}
-
+const char *WINDOW_NAME = "ray_trace";
 
 int main ()
 {
-    sf::RenderWindow window (sf::VideoMode (WINDOW_WIDTH, WINDOW_HEIGHT), "lighting");
+    sf::RenderWindow window (sf::VideoMode (WINDOW_WIDTH, WINDOW_HEIGHT), WINDOW_NAME);
     
-    sf::Uint8 screen[4 * WINDOW_HEIGHT * WINDOW_WIDTH] = {0};
+    sf::Uint8 screen[COLOR_COMP_NUM * WINDOW_HEIGHT * WINDOW_WIDTH] = {0};
     assert (screen);
 
     Point cam_strt  (0,0,0);
-    Point light_start (-50, 120, 250);
+    Point light_start (-50, 0, 0);
     Sphere sphere (Point (0, 150, 0), RADIUS);
 
 
-    int k = 0;
-        double max = 0;
-    for (int i = 0; i < 4 * WINDOW_HEIGHT * WINDOW_WIDTH; i += 4)
+    for (int i = 0; i < COLOR_COMP_NUM * WINDOW_HEIGHT * WINDOW_WIDTH; i += COLOR_COMP_NUM)
     {
         
-        int pixel_num = i / 4;                                      //
-        double x = -50.0 + (double)(pixel_num % WINDOW_WIDTH) * dx;  // convert into our camera system 
-        double z = 50.0 - (double)(pixel_num / WINDOW_WIDTH) * dz;  //
+        int pixel_num = i / COLOR_COMP_NUM;                            //
+                                                                       //
+        double x = X_START + (double)(pixel_num % WINDOW_WIDTH) * DX;  // convert pixel into our coordinates
+        double z = Z_START + (double)(pixel_num / WINDOW_WIDTH) * DZ;  //
+
         Point screen_p (x, 50, z);
 
-        // camera[i + 1] = 128 * cosinus;
+        double cosine = bdrf_calc (light_start, screen_p, sphere, cam_strt);
 
-        double cosinus = calc_diffise (light_start, screen_p, sphere, cam_strt);
-        if (cosinus > max)
-            max = cosinus;
-        // camera[i + 2] = 128 * cosinus;
-        screen[i + 3] = 0xff * cosinus;
-        // camera[i+1] = cosinus > 0 ? camera[i+1] : 0;
-        // camera[i+2] = cosinus > 0 ? camera[i+2] : 0;
-        screen[i+3] = cosinus > 0 ? screen[i+3] : 0;
-        // screen[i+1] = screen[i+2] = screen[i+3] * 0.5;
-        if (screen[i+3]) screen[i+2] = screen[i+1] = 0xff;
-        if (cosinus > 0 && cosinus < 0.9)
-            k++;
+        screen[i + ALPHA_COMP_IDX] = COLOR_MAX_VAL * cosine;
+        screen[i + ALPHA_COMP_IDX] = cosine > 0 ? screen[i + ALPHA_COMP_IDX] : 0;
 
+        if (screen[i + ALPHA_COMP_IDX]) 
+        {
+            screen[i + 2] = screen[i + 1] = COLOR_MAX_VAL;
+        }
     }    
-    printf ("max = %lf\n", max);
-
-    printf ("%d\n", k);
     
-    sf::Image raytrace;
-    raytrace.create (WINDOW_WIDTH, WINDOW_HEIGHT, screen);
+    sf::Image ray_trace;
+    ray_trace.create (WINDOW_WIDTH, WINDOW_HEIGHT, screen);
 
     sf::Texture texture;
-    texture.loadFromImage (raytrace);
+    texture.loadFromImage (ray_trace);
     sf::Sprite sprite;
     sprite.setTexture (texture);
 
