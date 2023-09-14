@@ -31,16 +31,20 @@ Point find_intersection (Sphere &sphere, const Vector &direction, const Point &c
     return joint_point;
 }
 
-double bdrf_calc (const Point &light, const Point &screen_p, Sphere &sphere, const Point &cam_strt)
+void bdrf_calc (BDRF &bdrf, const Point &light, const Point &screen_p, Sphere &sphere, const Point &cam_strt)
 {
     Vector observer = ! Vector (cam_strt, screen_p);
-    
     Point joint_point = find_intersection (sphere, observer, cam_strt);
 
     if (std::isnan (joint_point.x_) ||
         std::isnan (joint_point.y_) || 
         std::isnan (joint_point.z_))
-        return -1;
+        
+    {
+        bdrf.diffuse = 0;
+        bdrf.spectacular = 0;
+        return;
+    }
 
     Vector AP  (cam_strt, joint_point);
     Vector light_vec (joint_point, light);
@@ -55,5 +59,8 @@ double bdrf_calc (const Point &light, const Point &screen_p, Sphere &sphere, con
            spectacular = spectacular > 0 ? spectacular : 0;
            spectacular = pow (spectacular, SHININESS_FACTOR);
 
-    return (diffuse + spectacular)*BDRF_COMPONENT;
+    bdrf.diffuse = diffuse;
+    bdrf.spectacular = spectacular;
+
+    // return (diffuse + spectacular)*BDRF_COMPONENT;
 }
