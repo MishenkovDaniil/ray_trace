@@ -6,6 +6,24 @@
 #include <cassert>
 #include <SFML/Graphics.hpp>
 
+
+class Color
+{
+public:
+    uint8_t r_ = 0;
+    uint8_t g_ = 0;
+    uint8_t b_ = 0;
+    uint8_t a_ = 0;
+
+public:
+    Color () {;};
+    Color (uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r_(r), g_ (g), b_ (b), a_(a) {};
+
+    Color operator *  (double mult) const;
+    Color operator +  (const Color &color) const;
+    Color operator += (const Color &color);
+};
+
 class Point 
 {
 public:
@@ -34,32 +52,34 @@ public:
                                                     z_ (end.z_ - start.z_) {};
     Point vec_to_point () {return Point (x_, y_, z_);};
 
-    Vector operator * (const Vector &vec)const; //векторное произведение
-    Vector operator + (const Vector &vec)const;
+    Vector operator *  (const Vector &vec)const; //векторное произведение
+    Vector operator +  (const Vector &vec)const;
     Vector operator += (const Vector &vec);
     Vector operator -= (const Vector &vec);
-    Vector operator - (const Vector &vec)const;
-    Vector operator - ()const;
-    Vector operator && (const double mult)const; // покоординатное умножение
-    Vector operator ! () const;                   // нормализация вектора
+    Vector operator -  (const Vector &vec)const;
+    Vector operator -  ()const;
+    Vector operator && (const double mult)const;  // покоординатное умножение
+    Vector operator !  () const;                  // нормализация вектора
     double operator || (const Vector &vec)const ; // скалярное умножение
 };
 
 class Sphere
 {
-    Point start  = Point (0, 0, 0);
-    double radius = 0;
+    Point start_    = Point (0, 0, 0);
+    double radius_  = 0;
+    Color color_    = Color ();
 
 public:
-    Sphere (const Point& point, double r) : start (point), radius (r) {};
-    Point get_start () {return start;};
-    double get_radius () {return radius;};
+    Sphere (const Point& point, double r, Color sphere_color = Color (0, 0, 0, 0)) : start_ (point), radius_ (r), color_ (sphere_color){};
+    Point get_start   () {return start_ ;};
+    double get_radius () {return radius_;};
+    Color get_color   () {return color_ ;};
 };
 
 class Observer 
 {
 public:
-    Point start = Point (0, 0, 0);
+    Point start     = Point (0, 0, 0);
     Point lh_corner = Point (0, 0, 0);
     Point rl_corner = Point (0, 0, 0);
 
