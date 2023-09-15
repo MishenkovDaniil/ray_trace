@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 
 #include "bdrf_calc.h"
 #include "ray_cast.h"
@@ -24,11 +25,10 @@ void ray_cast (Color *screen, const Point *lights, const int light_num, Sphere &
 
         Point screen_p (x, SCREEN_Y, z);
 
-        // bdrf_calc (bdrf, lights[0], screen_p, sphere, cam_strt);
-
-        int light_idx = 1;
         bdrf_calc (bdrf, lights[0], screen_p, sphere, cam_strt);
         screen[pixel_num] = sphere.get_color () * bdrf.diffuse +  white * bdrf.spectacular;
+
+        int light_idx = 1;
         while (light_number--)
         {
             bdrf_calc (bdrf, lights[light_idx++], screen_p, sphere, cam_strt);
@@ -37,11 +37,15 @@ void ray_cast (Color *screen, const Point *lights, const int light_num, Sphere &
     }    
 }
 
-void move_left (Point *lights, Point *cam_strt, Button *buttons, int button_num)
+
+void move (Point *lights, Point *cam_strt, Button *buttons, const int button_num, sf::Keyboard::Key pressed_key)
 {
+    assert (lights &&  cam_strt && buttons);
+
     int button_idx = 0;
     bool change = false;
-    while (button_num)
+    int buttons_num = button_num;
+    while (buttons_num)
     {
         if (buttons[button_idx].get_status ())
         {
@@ -49,91 +53,81 @@ void move_left (Point *lights, Point *cam_strt, Button *buttons, int button_num)
             break;
         }
         button_idx++;
-        button_num--;
+        buttons_num--;
     }
 
-    if (buttons[button_idx].get_button_use () == LIGHT)
+
+    switch (pressed_key)
     {
-        lights[0].x_ -= 2;
-    }
-    else if (buttons[button_idx].get_button_use () == CAMERA)
-    {
-        cam_strt->x_ -= 2;
+        case sf::Keyboard::Left:
+        {
+            if (buttons[button_idx].get_button_use () == LIGHT)
+            {
+                lights[0].x_ -= 2;
+            }
+            else if (buttons[button_idx].get_button_use () == CAMERA)
+            {
+                cam_strt->x_ -= 2;
+            }
+            break;  
+        }
+        case sf::Keyboard::Right:
+        {
+            if (buttons[button_idx].get_button_use () == LIGHT)
+            {
+                lights[0].x_ += 2;
+            }
+            else if (buttons[button_idx].get_button_use () == CAMERA)
+            {
+                cam_strt->x_ += 2;
+            }
+            break;  
+        }
+        case sf::Keyboard::Up:
+        {
+            if (buttons[button_idx].get_button_use () == LIGHT)
+            {
+                lights[0].y_ += 2;
+            }
+            else if (buttons[button_idx].get_button_use () == CAMERA)
+            {
+                cam_strt->y_ += 2;
+            }
+            break;  
+        }
+        case sf::Keyboard::Down:
+        {
+            if (buttons[button_idx].get_button_use () == LIGHT)
+            {
+                lights[0].y_ -= 2;
+            }
+            else if (buttons[button_idx].get_button_use () == CAMERA)
+            {
+                cam_strt->y_ -= 2;
+            }
+            break;  
+        }
+        default:
+        {
+            break;
+        }
     }
 }
 
-void move_right (Point *lights, Point *cam_strt, Button *buttons, int button_num)
+
+void update_buttons (Button **buttons, const int button_num, double x, double y)
 {
+    int size_of_buttons = button_num;
     int button_idx = 0;
-    bool change = false;
-    while (button_num)
+
+    while (size_of_buttons--)
     {
-        if (buttons[button_idx].get_status ())
+        if ((buttons[button_idx])->contains (x, y))
         {
-            change = true;
+            (buttons[button_idx])->update (!((buttons[button_idx])->get_status ()));
             break;
         }
         button_idx++;
-        button_num--;
-    }
-
-    if (buttons[button_idx].get_button_use () == LIGHT)
-    {
-        lights[0].x_ += 2;
-    }
-    else if (buttons[button_idx].get_button_use () == CAMERA)
-    {
-        cam_strt->x_ += 2;
-    }
-}
-
-void move_up (Point *lights, Point *cam_strt, Button *buttons, int button_num)
-{
-    int button_idx = 0;
-    bool change = false;
-    while (button_num)
-    {
-        if (buttons[button_idx].get_status ())
-        {
-            change = true;
-            break;
-        }
-        button_idx++;
-        button_num--;
-    }
-
-    if (buttons[button_idx].get_button_use () == LIGHT)
-    {
-        lights[0].y_ += 2;
-    }
-    else if (buttons[button_idx].get_button_use () == CAMERA)
-    {
-        cam_strt->y_ += 2;
-    }
-}
-
-void move_down (Point *lights, Point *cam_strt, Button *buttons, int button_num)
-{
-    int button_idx = 0;
-    bool change = false;
-    while (button_num)
-    {
-        if (buttons[button_idx].get_status ())
-        {
-            change = true;
-            break;
-        }
-        button_idx++;
-        button_num--;
-    }
-
-    if (buttons[button_idx].get_button_use () == LIGHT)
-    {
-        lights[0].y_ -= 2;
-    }
-    else if (buttons[button_idx].get_button_use () == CAMERA)
-    {
-        cam_strt->y_ -= 2;
     }
 }
 
