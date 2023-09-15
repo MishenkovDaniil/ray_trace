@@ -103,3 +103,50 @@ double Vector::operator || (const Vector &vec) const
     return x_ * vec.x_ + y_  * vec.y_ + z_ * vec.z_;
 }
 
+
+void Button::draw (sf::RenderWindow &window, int screen_h, int screen_w)
+{
+    int width = rl_corner_.x_ - lh_corner_.x_;
+    int height = rl_corner_.y_ - lh_corner_.y_;
+
+    sf::RectangleShape button (sf::Vector2f (width, height));
+    button.setFillColor ((sf::Color)color_);
+    // button.setOutlineColor (sf::Color::White);
+    button.setOutlineThickness (1);
+
+    sf::Texture button_texture;
+    button.setTexture (&button_texture);
+    button.setPosition (lh_corner_.x_, lh_corner_.y_);
+    sf::Text text;
+    
+    sf::Font font;
+    font.loadFromFile ("button_font.ttf");
+    text.setString (string_);
+    text.setFont (font);
+    text.setFillColor (sf::Color::White);
+    text.setCharacterSize (10);
+    double text_width = text.findCharacterPos(str_size - 1).x - text.findCharacterPos (0).x;
+    
+    text.setPosition (lh_corner_.x_ + (width - text_width) / 2, lh_corner_.y_ + height / 2 - 5);
+
+    window.draw (button);
+    window.draw (text);
+}
+
+bool Button::contains (double x, double y)
+{
+    return (lh_corner_.x_ <= x && x <= rl_corner_.x_ && rl_corner_.x_ <= y && y <= rl_corner_.y_);
+}
+
+void Button::update (bool is_pressed)
+{
+    if (is_pressed)
+    {
+        color_ = pressed_button_color;
+    }                                 
+    else 
+    {
+        color_ = unpressed_button_color;
+    }   
+    is_pressed_ = is_pressed;
+}
