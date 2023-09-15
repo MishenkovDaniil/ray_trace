@@ -5,54 +5,58 @@
 
 #include "graphic_structures.h"
 #include "bdrf_calc.h"
+#include "ray_cast.h"
+#include "screen.h"
 
-const int WINDOW_WIDTH = 800;
-const int WINDOW_HEIGHT = 800;
+static const double RADIUS = 100;
 
-const double X_START = -50;
-const double Z_START = 50;
+static const int COLOR_COMP_NUM = 4;
+static const int ALPHA_COMP_IDX = 3;
+static const int COLOR_MAX_VAL = 0xFF;
+static const int LIGHT_NUM = 2;
+static const Color BROWN = Color (128, 64, 48, 255);
 
-const double X_END = 50;
-const double Z_END = -50;
-
-const double DX = (X_END - X_START) / (double)WINDOW_WIDTH;
-const double DZ = (Z_END - Z_START) / (double)WINDOW_HEIGHT;
-
-const double RADIUS = 100;
-
-const int COLOR_COMP_NUM = 4;
-const int ALPHA_COMP_IDX = 3;
-const int COLOR_MAX_VAL = 0xFF;
-const int LIGHT_NUM = 2;
-
-const char *WINDOW_NAME = "ray_cast";
-
-
-void ray_cast (Color *screen, const Point *lights, const int light_num, Sphere &sphere, const Point &cam_strt);
+static const int DELTA_CAN = 2;
+static const int DELTA_LIGHT = 2;
 
 int main ()
 {
     sf::RenderWindow window (sf::VideoMode (WINDOW_WIDTH, WINDOW_HEIGHT), WINDOW_NAME);
+    // sf::RenderTexture window_texture = sf::RenderTexture ();
+    // window_texture.create (WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    Point cam_strt  (0, 0,0);
+    Point light_start1 (-50, 0, 0);
+    Point light_start2 (0, 150, 250);
+    Sphere sphere (Point (0, 150, 0), RADIUS, Color (0xff, 0, 0, 0xff));
+
+    // ray_cast ((Color *)screen, lights,LIGHT_NUM, sphere, cam_strt);
+    
+    // sf::Image ray_trace;
+    // sf::Texture texture;
+    // sf::Sprite sprite;
+
+    // ray_trace.create (WINDOW_WIDTH, WINDOW_HEIGHT, screen);
+    // texture.loadFromImage (ray_trace);
+    // sprite.setTexture (texture);
+
+    Button light_button (Point (0, 750), Point (50, 800), BROWN, "light", LIGHT);
+    Button camera_button (Point (50, 750), Point (100, 800), BROWN, "camera", CAMERA);
     
     sf::Uint8 screen[COLOR_COMP_NUM * WINDOW_HEIGHT * WINDOW_WIDTH] = {0};
     assert (screen);
-
-    Point cam_strt  (0,0,0);
-    Point light_start2 (-50, 0, 0);
-    Point light_start1 (0, 150, 250);
-    Sphere sphere (Point (0, 150, 0), RADIUS, Color (0xff, 0, 0, 0xff));
-
+    
     Point lights[LIGHT_NUM] = {light_start1, light_start2};
-
     ray_cast ((Color *)screen, lights,LIGHT_NUM, sphere, cam_strt);
     
-    sf::Image ray_trace;
+    sf::Image ray_cast_img;
     sf::Texture texture;
     sf::Sprite sprite;
-
-    ray_trace.create (WINDOW_WIDTH, WINDOW_HEIGHT, screen);
-    texture.loadFromImage (ray_trace);
-    sprite.setTexture (texture);
+    ray_cast_img.create (WINDOW_WIDTH, WINDOW_HEIGHT, screen);
+        
+    Button *buttons = new Button[2];
+    buttons[0] = light_button;
+    buttons[1] = camera_button;
 
     while (window.isOpen())
     {
@@ -60,44 +64,70 @@ int main ()
         while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed || event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
+            {
                 window.close();
+            }
+            else if (event.type == sf::Event::MouseButtonPressed && 
+                     event.mouseButton.button == sf::Mouse::Left &&
+                     (event.mouseButton.x || event.mouseButton.y))
+            {
+                double x = event.mouseButton.x;
+                double y = event.mouseButton.y;
+                if (light_button.contains (x, y))
+                {
+                    light_button.update (!(light_button.get_status ()));
+                }
+                else if (camera_button.contains (x, y))
+                {
+                    camera_button.update (!(camera_button.get_status ()));
+                }
+            }
+            else if (event.type == sf::Event::KeyPressed)
+            {
+                switch (event.key.code)
+                {
+                    case sf::Keyboard::Left:
+                    {
+                        move_left (lights, &cam_strt, &light_button, 2); 
+                        break;  
+                    }
+                    case sf::Keyboard::Right:
+                    {
+                        move_right (lights, &cam_strt, &light_button, 2);   
+                        break;  
+                    }
+                    case sf::Keyboard::Up:
+                    {
+                        move_up (lights, &cam_strt, &light_button, 2);   
+                        break;  
+                    }
+                    case sf::Keyboard::Down:
+                    {
+                        move_down (lights, &cam_strt, &light_button, 2);   
+                        break;  
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                }
+                ray_cast ((Color *)screen, lights, LIGHT_NUM, sphere, cam_strt);
+                ray_cast_img.create (WINDOW_WIDTH, WINDOW_HEIGHT, screen);
+            }
         }
+        
+        texture.loadFromImage (ray_cast_img);
+        sprite.setTexture (texture);
 
         window.clear();
         window.draw (sprite);
+
+        light_button.draw (window, WINDOW_WIDTH, WINDOW_HEIGHT);
+        camera_button.draw (window, WINDOW_WIDTH, WINDOW_HEIGHT);
+
         window.display();
     }
-
+    
+    // delete[] buttons;
     return 0;
-}
-// несколько экранных кнопок которые управляют сценой (поворот, смещение ) 
-//make array of colours instead uint8 and make a parameter: figure colour                +++
-//color --> vector //vector is not uint8 () and is not intuitive to use vectors here
-
-void ray_cast (Color *screen, const Point *lights, const int light_num, Sphere &sphere, const Point &cam_strt)
-{
-    BDRF bdrf;
-
-    Color white (0xff, 0xff, 0xff, 0xff);
-
-    for (int pixel_num = 0; pixel_num < WINDOW_HEIGHT * WINDOW_WIDTH; pixel_num++)
-    {
-        int light_number = light_num;
-                                                                       //
-        double x = X_START + (double)(pixel_num % WINDOW_WIDTH) * DX;  // convert pixel into our coordinates
-        double z = Z_START + (double)(pixel_num / WINDOW_WIDTH) * DZ;  //
-
-        Point screen_p (x, 50, z);
-
-        double cosine = 0;
-        
-        bdrf_calc (bdrf, lights[0], screen_p, sphere, cam_strt);
-
-        int light_idx = 0;
-        while (light_number--)
-        {
-            bdrf_calc (bdrf, lights[light_idx++], screen_p, sphere, cam_strt);
-            screen[pixel_num] += sphere.get_color () * bdrf.diffuse +  white * bdrf.spectacular;
-        }
-    }    
 }
